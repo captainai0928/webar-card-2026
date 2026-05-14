@@ -8,8 +8,19 @@
   <link rel="icon" href="data:," />
   <style>
     :root { color-scheme: dark; }
-    html, body { margin: 0; padding: 0; height: 100%; background: #0a0e1c; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-    a-scene { width: 100vw; height: 100vh; display: block; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a-scene { width: 100vw; height: 100vh; display: block; background: transparent !important; }
+    .a-canvas { background: transparent !important; }
+    video, .mindar-ui-overlay, .mindar-ui-loading, .mindar-ui-scanning {
+      z-index: 1 !important;
+    }
+    video[autoplay] {
+      position: fixed !important; top: 0 !important; left: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      object-fit: cover !important;
+      z-index: 0 !important;
+    }
+    .a-enter-vr, .a-orientation-modal { display: none !important; }
     #intro {
       position: fixed; inset: 0; z-index: 10;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -111,9 +122,10 @@
 
   <a-scene
     id="scene"
-    style="display:none"
+    style="display:none; background: transparent;"
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    embedded
+    renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
     <a-assets>
