@@ -67,14 +67,6 @@
       align-items: center; justify-content: center; text-align: center;
     }
     #err pre { white-space: pre-wrap; font-size: 12px; opacity: 0.85; }
-    #debug {
-      position: fixed; top: 8px; right: 8px; z-index: 25;
-      background: rgba(0,0,0,0.75); color: #34d399;
-      font-family: monospace; font-size: 10px; line-height: 1.4;
-      padding: 6px 8px; border-radius: 6px; max-width: 60vw;
-      max-height: 40vh; overflow: auto; white-space: pre-wrap;
-      pointer-events: none;
-    }
     #gate {
       position: fixed; inset: 0; z-index: 30;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -129,7 +121,6 @@
   <div id="hint-overlay">📷 카드를 펼친 채로 카메라에 비춰주세요</div>
 
   <div id="err"><div><h3>오류</h3><pre id="errMsg"></pre></div></div>
-  <div id="debug">debug ready</div>
 
   <a-scene
     id="scene"
@@ -143,22 +134,19 @@
     </a-assets>
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- diag: fixed box outside any target — should always render if a-frame is alive -->
-    <a-box position="0 0 -2" color="#22c55e" width="0.6" height="0.6" depth="0.05"></a-box>
-
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-box color="#fda4af" position="0 0 0.05" depth="0.04" height="0.4" width="0.4"></a-box>
-      <a-plane src="#hero" position="0 0.6 0.05" height="0.85" width="0.43"></a-plane>
+    <a-entity mindar-image-target="targetIndex: 0" data-color="#fda4af">
+      <a-plane src="#hero" position="0 0.5 0.05" height="0.85" width="0.43"></a-plane>
+      <a-entity class="hearts"></a-entity>
     </a-entity>
 
-    <a-entity mindar-image-target="targetIndex: 1">
-      <a-box color="#fb7185" position="0 0 0.05" depth="0.04" height="0.4" width="0.4"></a-box>
-      <a-plane src="#hero" position="0 0.6 0.05" height="0.85" width="0.43"></a-plane>
+    <a-entity mindar-image-target="targetIndex: 1" data-color="#fb7185">
+      <a-plane src="#hero" position="0 0.5 0.05" height="0.85" width="0.43"></a-plane>
+      <a-entity class="hearts"></a-entity>
     </a-entity>
 
-    <a-entity mindar-image-target="targetIndex: 2">
-      <a-box color="#c084fc" position="0 0 0.05" depth="0.04" height="0.4" width="0.4"></a-box>
-      <a-plane src="#hero" position="0 0.6 0.05" height="0.85" width="0.43"></a-plane>
+    <a-entity mindar-image-target="targetIndex: 2" data-color="#c084fc">
+      <a-plane src="#hero" position="0 0.5 0.05" height="0.85" width="0.43"></a-plane>
+      <a-entity class="hearts"></a-entity>
     </a-entity>
   </a-scene>
 
@@ -168,21 +156,7 @@
     const TRIGGER_IMGS = ["assets/t-a.jpg", "assets/t-b.jpg", "assets/t-c.jpg"];
     const CACHE_KEY = "ar-multi-target-v4";
 
-    const dbgEl = document.getElementById("debug");
-    const dbgLines = [];
-    const log = (m) => {
-      console.log("[ar]", m);
-      const t = new Date().toISOString().slice(11, 19);
-      dbgLines.push(`${t} ${m}`);
-      if (dbgLines.length > 20) dbgLines.shift();
-      if (dbgEl) dbgEl.textContent = dbgLines.join("\n");
-    };
-    window.addEventListener("error", (e) => log(`[err] ${e.message || e.error}`));
-    window.addEventListener("unhandledrejection", (e) => log(`[rej] ${e.reason?.message || e.reason}`));
-    log(`ua: ${navigator.userAgent.slice(0, 50)}`);
-    log(`MINDAR keys: ${Object.keys(window.MINDAR || {}).join(",")}`);
-    if (window.MINDAR?.IMAGE) log(`IMAGE keys: ${Object.keys(window.MINDAR.IMAGE).slice(0, 8).join(",")}`);
-    log(`AFRAME: ${!!window.AFRAME}`);
+    const log = (m) => console.log("[ar]", m);
 
     async function sha256Hex(s) {
       const buf = new TextEncoder().encode(s);
@@ -293,9 +267,26 @@
           document.getElementById("hint-overlay").style.display = "block";
         });
         scene.addEventListener("arError", (e) => { log("[arError]"); showErr(e?.detail ?? e); });
+
+        // Spawn color hearts per target
         scene.querySelectorAll("[mindar-image-target]").forEach((t, i) => {
-          t.addEventListener("targetFound", () => { log(`target ${i} found`); document.getElementById("hint-overlay").style.display = "none"; });
-          t.addEventListener("targetLost", () => { log(`target ${i} lost`); document.getElementById("hint-overlay").style.display = "block"; });
+          const hostsEl = t.querySelector(".hearts");
+          const color = t.getAttribute("data-color");
+          const variants = [color, "#fde68a", color, "#ffffff", color, "#fde68a", color, "#ffffff"];
+          const count = 8;
+          for (let h = 0; h < count; h++) {
+            const heart = document.createElement("a-text");
+            heart.setAttribute("value", "♥");
+            heart.setAttribute("color", variants[h]);
+            heart.setAttribute("align", "center");
+            heart.setAttribute("width", "0.7");
+            const angle = (h / count) * Math.PI * 2;
+            const r = 0.5;
+            heart.setAttribute("position", `${Math.cos(angle) * r} ${Math.sin(angle) * 0.3 - 0.1} 0.06`);
+            hostsEl.appendChild(heart);
+          }
+          t.addEventListener("targetFound", () => { document.getElementById("hint-overlay").style.display = "none"; });
+          t.addEventListener("targetLost", () => { document.getElementById("hint-overlay").style.display = "block"; });
         });
 
         setLoadingMsg("카메라 시작 중…");
