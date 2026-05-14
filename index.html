@@ -133,7 +133,6 @@
     id="scene"
     style="display:none; background: transparent;"
     color-space="sRGB"
-    embedded
     renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
@@ -145,19 +144,22 @@
 
     <!-- Target A: 장윤영 선생님 (담임, 빨간 카네이션) -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-image src="#hero" position="0 0.4 0.02" height="0.85" width="0.43"></a-image>
+      <a-box color="#ef4444" position="0 0 0.05" depth="0.02" height="0.3" width="0.3"></a-box>
+      <a-image src="assets/hero.jpg" position="0 0.5 0.02" height="0.85" width="0.43"></a-image>
       <a-entity class="hearts" data-color="#fda4af"></a-entity>
     </a-entity>
 
     <!-- Target B: 조한결 선생님 -->
     <a-entity mindar-image-target="targetIndex: 1">
-      <a-image src="#hero" position="0 0.4 0.02" height="0.85" width="0.43"></a-image>
+      <a-box color="#ef4444" position="0 0 0.05" depth="0.02" height="0.3" width="0.3"></a-box>
+      <a-image src="assets/hero.jpg" position="0 0.5 0.02" height="0.85" width="0.43"></a-image>
       <a-entity class="hearts" data-color="#fb7185"></a-entity>
     </a-entity>
 
     <!-- Target C: 김민주 선생님 (보라 카네이션) -->
     <a-entity mindar-image-target="targetIndex: 2">
-      <a-image src="#hero" position="0 0.4 0.02" height="0.85" width="0.43"></a-image>
+      <a-box color="#ef4444" position="0 0 0.05" depth="0.02" height="0.3" width="0.3"></a-box>
+      <a-image src="assets/hero.jpg" position="0 0.5 0.02" height="0.85" width="0.43"></a-image>
       <a-entity class="hearts" data-color="#c084fc"></a-entity>
     </a-entity>
   </a-scene>
