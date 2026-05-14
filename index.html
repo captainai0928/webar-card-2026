@@ -82,6 +82,7 @@
     #gate .err-toast { color: #fda4af; font-size: 13px; margin-top: 18px; min-height: 18px; }
     #gate .lock { font-size: 36px; margin-bottom: 14px; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"></script>
 </head>
 <body>
@@ -141,6 +142,10 @@
     log(`ua: ${navigator.userAgent.slice(0, 50)}`);
     log(`secure: ${window.isSecureContext}`);
     log(`mediaDevices: ${!!navigator.mediaDevices?.getUserMedia}`);
+    log(`MINDAR keys: ${Object.keys(window.MINDAR || {}).join(",")}`);
+    if (window.MINDAR?.IMAGE) {
+      log(`MINDAR.IMAGE keys: ${Object.keys(window.MINDAR.IMAGE).slice(0, 8).join(",")}`);
+    }
 
     async function sha256Hex(s) {
       const buf = new TextEncoder().encode(s);
