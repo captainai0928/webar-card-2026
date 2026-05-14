@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#3b82f6" />
+  <title>AR Card</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #0a0e1c; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a-scene { width: 100vw; height: 100vh; display: block; }
+    #intro {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; text-align: center;
+      background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%);
+    }
+    #intro h1 { font-size: 26px; margin: 0 0 8px; font-weight: 700; }
+    #intro p { font-size: 15px; line-height: 1.6; opacity: 0.9; margin: 4px 0; max-width: 320px; }
+    #intro button {
+      margin-top: 28px;
+      padding: 16px 28px; font-size: 17px; font-weight: 600;
+      background: #fff; color: #1e3a8a; border: 0; border-radius: 999px;
+      box-shadow: 0 10px 30px rgba(255,255,255,0.15);
+      cursor: pointer;
+    }
+    #intro .hint { margin-top: 18px; font-size: 12px; opacity: 0.6; }
+    #intro .heart { font-size: 36px; margin-bottom: 12px; animation: bounce 1.4s infinite ease-in-out; }
+    @keyframes bounce { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+    #loading {
+      position: fixed; inset: 0; z-index: 9;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; text-align: center; background: rgba(10,14,28,0.92);
+    }
+    #loading .ring {
+      width: 56px; height: 56px; border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.15);
+      border-top-color: #fff;
+      animation: spin 0.9s linear infinite; margin-bottom: 18px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading .msg { font-size: 14px; opacity: 0.85; }
+    #loading .pct { font-size: 12px; opacity: 0.6; margin-top: 6px; }
+    #hint-overlay {
+      position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8;
+      padding: 10px 16px; background: rgba(0,0,0,0.55); border-radius: 999px;
+      font-size: 13px; backdrop-filter: blur(8px);
+      display: none;
+    }
+    #err {
+      position: fixed; inset: 0; z-index: 20; padding: 24px;
+      background: #7f1d1d; color: #fff; display: none;
+      align-items: center; justify-content: center; text-align: center;
+    }
+    #err pre { white-space: pre-wrap; font-size: 12px; opacity: 0.85; }
+    #gate {
+      position: fixed; inset: 0; z-index: 30;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; text-align: center;
+      background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%);
+    }
+    #gate h2 { font-size: 22px; margin: 0 0 6px; font-weight: 700; }
+    #gate .sub { font-size: 14px; opacity: 0.8; margin: 0 0 24px; max-width: 300px; line-height: 1.5; }
+    #gate .pin-row { display: flex; gap: 10px; }
+    #gate input.pin {
+      width: 56px; height: 64px; font-size: 28px; text-align: center;
+      border: 2px solid rgba(255,255,255,0.25); border-radius: 12px;
+      background: rgba(255,255,255,0.08); color: #fff; outline: none;
+      font-family: monospace;
+    }
+    #gate input.pin:focus { border-color: #fff; background: rgba(255,255,255,0.15); }
+    #gate .err-toast { color: #fda4af; font-size: 13px; margin-top: 18px; min-height: 18px; }
+    #gate .lock { font-size: 36px; margin-bottom: 14px; }
+  </style>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+</head>
+<body>
+  <div id="gate">
+    <div class="lock">🔒</div>
+    <h2>PIN을 입력해주세요</h2>
+    <p class="sub">카드에 적힌 4자리 PIN을 입력하면<br/>AR 카드가 시작됩니다.</p>
+    <div class="pin-row">
+      <input class="pin" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="0" />
+      <input class="pin" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="1" />
+      <input class="pin" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="2" />
+      <input class="pin" maxlength="1" inputmode="numeric" pattern="[0-9]" data-idx="3" />
+    </div>
+    <div class="err-toast" id="pin-err"></div>
+  </div>
+
+  <div id="intro" style="display:none">
+    <div class="heart">💖</div>
+    <h1>AR 카드</h1>
+    <p>카드를 비추면 메시지가 떠올라요.</p>
+    <p style="opacity:0.7">처음 한 번만 5~10초 준비 시간이 필요합니다.</p>
+    <button id="start">시작하기</button>
+    <p class="hint">카메라 권한을 허용해주세요</p>
+  </div>
+
+  <div id="loading">
+    <div class="ring"></div>
+    <div class="msg">카드 인식 준비 중…</div>
+    <div class="pct" id="pct">0%</div>
+  </div>
+
+  <div id="hint-overlay">📷 카드 전체가 보이도록 비춰주세요</div>
+
+  <div id="err"><div><h3>오류</h3><pre id="errMsg"></pre></div></div>
+
+  <a-scene
+    id="scene"
+    style="display:none"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+    <a-assets>
+      <img id="poster" src="assets/scene.jpg" crossorigin="anonymous" />
+    </a-assets>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-plane
+        src="#poster"
+        position="0 -0.05 0"
+        height="0.62"
+        width="0.55"
+        opacity="0"
+        animation__fadein="property: opacity; to: 1; dur: 700; easing: easeOutCubic; startEvents: targetFound"
+        animation__fadeout="property: opacity; to: 0; dur: 350; easing: easeInCubic; startEvents: targetLost">
+      </a-plane>
+
+      <a-text
+        value="선생님 사랑해요"
+        position="0 0.35 0.02"
+        align="center"
+        color="#ffffff"
+        width="2.2"
+        opacity="0"
+        animation__fadein="property: opacity; to: 1; dur: 800; delay: 200; easing: easeOutCubic; startEvents: targetFound"
+        animation__fadeout="property: opacity; to: 0; dur: 300; easing: easeInCubic; startEvents: targetLost">
+      </a-text>
+
+      <a-text
+        value="우리 모두의 마음 ♥"
+        position="0 0.28 0.02"
+        align="center"
+        color="#fde68a"
+        width="1.6"
+        opacity="0"
+        animation__fadein="property: opacity; to: 1; dur: 800; delay: 400; easing: easeOutCubic; startEvents: targetFound"
+        animation__fadeout="property: opacity; to: 0; dur: 300; easing: easeInCubic; startEvents: targetLost">
+      </a-text>
+
+      <a-entity id="hearts"></a-entity>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const PIN_HASH = "2b163bbc76c9e28c28fface3cec21aa8d3c32a1b043e5393076893481974bc7a";
+    const PIN_SESSION_KEY = "ar-pin-ok";
+    const TRIGGER_IMG = "assets/target.jpg";
+    const CACHE_KEY = "ar-target-v1";
+
+    async function sha256Hex(s) {
+      const buf = new TextEncoder().encode(s);
+      const hash = await crypto.subtle.digest("SHA-256", buf);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function showIntro() {
+      document.getElementById("gate").style.display = "none";
+      document.getElementById("intro").style.display = "flex";
+    }
+
+    async function tryPin(pin) {
+      const h = await sha256Hex(`haneul-${pin}-2026`);
+      if (h === PIN_HASH) {
+        try { sessionStorage.setItem(PIN_SESSION_KEY, "1"); } catch (_) {}
+        showIntro();
+        return true;
+      }
+      return false;
+    }
+
+    function setupGate() {
+      if (sessionStorage.getItem(PIN_SESSION_KEY) === "1") {
+        showIntro();
+        return;
+      }
+      const inputs = Array.from(document.querySelectorAll("#gate input.pin"));
+      const errEl = document.getElementById("pin-err");
+      inputs[0].focus();
+      inputs.forEach((el, i) => {
+        el.addEventListener("input", async () => {
+          el.value = el.value.replace(/\D/g, "");
+          if (el.value && i < inputs.length - 1) inputs[i + 1].focus();
+          if (inputs.every(x => x.value.length === 1)) {
+            const pin = inputs.map(x => x.value).join("");
+            errEl.textContent = "확인 중…";
+            const ok = await tryPin(pin);
+            if (!ok) {
+              errEl.textContent = "PIN이 맞지 않아요. 카드를 다시 확인해주세요.";
+              inputs.forEach(x => x.value = "");
+              inputs[0].focus();
+            }
+          }
+        });
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Backspace" && !el.value && i > 0) inputs[i - 1].focus();
+        });
+      });
+    }
+    setupGate();
+
+    const log = (m) => console.log("[ar]", m);
+    const setPct = (n) => { document.getElementById("pct").textContent = `${n.toFixed(0)}%`; };
+    const setLoadingMsg = (m) => { document.querySelector("#loading .msg").textContent = m; };
+    const showErr = (e) => {
+      document.getElementById("err").style.display = "flex";
+      document.getElementById("errMsg").textContent = (e && e.stack) ? e.stack : String(e);
+      console.error(e);
+    };
+
+    async function loadOrCompileTarget() {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          log("cache hit");
+          const arr = Uint8Array.from(atob(cached), c => c.charCodeAt(0));
+          return URL.createObjectURL(new Blob([arr.buffer]));
+        }
+      } catch (_) { /* cache miss/error */ }
+
+      setLoadingMsg("카드 정보를 학습 중이에요…");
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = TRIGGER_IMG;
+      await new Promise((r, j) => { img.onload = r; img.onerror = j; });
+      log(`trigger loaded ${img.naturalWidth}x${img.naturalHeight}`);
+
+      if (!window.MINDAR || !window.MINDAR.IMAGE || !window.MINDAR.IMAGE.Compiler) {
+        throw new Error("MindAR Compiler unavailable");
+      }
+      const compiler = new window.MINDAR.IMAGE.Compiler();
+      await compiler.compileImageTargets([img], (progress) => setPct(progress));
+      const exported = await compiler.exportData();
+      log(`compiled ${exported.byteLength} bytes`);
+
+      try {
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
+        localStorage.setItem(CACHE_KEY, b64);
+      } catch (_) { /* localStorage may be full, ignore */ }
+
+      return URL.createObjectURL(new Blob([exported]));
+    }
+
+    function spawnHearts(host) {
+      const count = 8;
+      const colors = ["#fda4af", "#f9a8d4", "#fcd34d", "#fde68a", "#fb7185", "#f472b6", "#fbbf24", "#fca5a5"];
+      for (let i = 0; i < count; i++) {
+        const h = document.createElement("a-text");
+        h.setAttribute("value", "♥");
+        h.setAttribute("color", colors[i % colors.length]);
+        h.setAttribute("align", "center");
+        h.setAttribute("width", "0.6");
+        const angle = (i / count) * Math.PI * 2;
+        const r = 0.45;
+        h.setAttribute("position", `${Math.cos(angle) * r} ${Math.sin(angle) * 0.25 - 0.05} 0.05`);
+        h.setAttribute("opacity", "0");
+        h.setAttribute("animation__in", `property: opacity; to: 0.95; dur: 900; delay: ${600 + i * 80}; easing: easeOutCubic; startEvents: targetFound`);
+        h.setAttribute("animation__bob", `property: position; dir: alternate; loop: true; dur: ${1400 + i * 90}; delay: ${800 + i * 100}; to: ${Math.cos(angle) * r} ${Math.sin(angle) * 0.25 + 0.05} 0.05; easing: easeInOutSine; startEvents: targetFound`);
+        h.setAttribute("animation__out", `property: opacity; to: 0; dur: 300; easing: easeInCubic; startEvents: targetLost`);
+        host.appendChild(h);
+      }
+    }
+
+    document.getElementById("start").addEventListener("click", async () => {
+      try {
+        document.getElementById("intro").style.display = "none";
+        document.getElementById("loading").style.display = "flex";
+        const targetUrl = await loadOrCompileTarget();
+
+        const scene = document.getElementById("scene");
+        scene.setAttribute("mindar-image", `imageTargetSrc: ${targetUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`);
+        scene.style.display = "block";
+
+        spawnHearts(document.getElementById("hearts"));
+
+        scene.addEventListener("renderstart", () => log("renderstart"));
+        scene.addEventListener("arReady", () => {
+          log("arReady");
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("hint-overlay").style.display = "block";
+        });
+        scene.addEventListener("arError", (e) => showErr(e?.detail ?? e));
+
+        const targetEl = scene.querySelector("[mindar-image-target]");
+        targetEl.addEventListener("targetFound", () => {
+          document.getElementById("hint-overlay").style.display = "none";
+        });
+        targetEl.addEventListener("targetLost", () => {
+          document.getElementById("hint-overlay").style.display = "block";
+        });
+
+        setLoadingMsg("카메라 시작 중…");
+        await scene.systems["mindar-image-system"].start();
+      } catch (e) {
+        showErr(e);
+      }
+    });
+  </script>
+</body>
+</html>
