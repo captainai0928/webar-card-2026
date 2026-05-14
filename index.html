@@ -133,7 +133,6 @@
 
   <a-scene
     id="scene"
-    style="display:none"
     color-space="sRGB"
     embedded
     renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;"
@@ -286,8 +285,7 @@
 
         const scene = document.getElementById("scene");
         scene.setAttribute("mindar-image", `imageTargetSrc: ${targetUrl}; maxTrack: 1; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`);
-        scene.style.display = "block";
-        log("scene visible");
+        log("mindar attached");
 
         scene.addEventListener("arReady", () => {
           log("arReady");
