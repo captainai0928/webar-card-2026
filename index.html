@@ -116,7 +116,7 @@
     <div class="pct" id="pct">0%</div>
   </div>
 
-  <div id="hint-overlay">📷 카드 전체가 보이도록 비춰주세요</div>
+  <div id="hint-overlay">📷 카드를 펼친 채로 카메라에 비춰주세요</div>
 
   <div id="err"><div><h3>오류</h3><pre id="errMsg"></pre></div></div>
 
@@ -128,53 +128,53 @@
     renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
-    <a-assets>
-      <img id="poster" src="assets/scene.jpg" crossorigin="anonymous" />
-    </a-assets>
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+    <!-- Target A: 장윤영 선생님 (담임, 빨간 카네이션) -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-plane
-        src="#poster"
-        position="0 -0.05 0"
-        height="0.62"
-        width="0.55"
-        opacity="0"
-        animation__fadein="property: opacity; to: 1; dur: 700; easing: easeOutCubic; startEvents: targetFound"
-        animation__fadeout="property: opacity; to: 0; dur: 350; easing: easeInCubic; startEvents: targetLost">
-      </a-plane>
-
-      <a-text
-        value="선생님 사랑해요"
-        position="0 0.35 0.02"
-        align="center"
-        color="#ffffff"
-        width="2.2"
+      <a-text value="감사합니다 ♥" position="0 0.45 0.02" align="center" color="#fda4af" width="2.4"
         opacity="0"
         animation__fadein="property: opacity; to: 1; dur: 800; delay: 200; easing: easeOutCubic; startEvents: targetFound"
-        animation__fadeout="property: opacity; to: 0; dur: 300; easing: easeInCubic; startEvents: targetLost">
-      </a-text>
-
-      <a-text
-        value="우리 모두의 마음 ♥"
-        position="0 0.28 0.02"
-        align="center"
-        color="#fde68a"
-        width="1.6"
+        animation__fadeout="property: opacity; to: 0; dur: 300; startEvents: targetLost"></a-text>
+      <a-text value="장윤영 선생님" position="0 0.35 0.02" align="center" color="#ffffff" width="1.8"
         opacity="0"
         animation__fadein="property: opacity; to: 1; dur: 800; delay: 400; easing: easeOutCubic; startEvents: targetFound"
-        animation__fadeout="property: opacity; to: 0; dur: 300; easing: easeInCubic; startEvents: targetLost">
-      </a-text>
+        animation__fadeout="property: opacity; to: 0; dur: 300; startEvents: targetLost"></a-text>
+      <a-entity class="hearts" data-color="#fda4af"></a-entity>
+    </a-entity>
 
-      <a-entity id="hearts"></a-entity>
+    <!-- Target B: 조한결 선생님 -->
+    <a-entity mindar-image-target="targetIndex: 1">
+      <a-text value="사랑해요 ♥" position="0 0.45 0.02" align="center" color="#fb7185" width="2.4"
+        opacity="0"
+        animation__fadein="property: opacity; to: 1; dur: 800; delay: 200; easing: easeOutCubic; startEvents: targetFound"
+        animation__fadeout="property: opacity; to: 0; dur: 300; startEvents: targetLost"></a-text>
+      <a-text value="조한결 선생님" position="0 0.35 0.02" align="center" color="#ffffff" width="1.8"
+        opacity="0"
+        animation__fadein="property: opacity; to: 1; dur: 800; delay: 400; easing: easeOutCubic; startEvents: targetFound"
+        animation__fadeout="property: opacity; to: 0; dur: 300; startEvents: targetLost"></a-text>
+      <a-entity class="hearts" data-color="#fb7185"></a-entity>
+    </a-entity>
+
+    <!-- Target C: 김민주 선생님 (보라 카네이션) -->
+    <a-entity mindar-image-target="targetIndex: 2">
+      <a-text value="고마워요 ♥" position="0 0.45 0.02" align="center" color="#c084fc" width="2.4"
+        opacity="0"
+        animation__fadein="property: opacity; to: 1; dur: 800; delay: 200; easing: easeOutCubic; startEvents: targetFound"
+        animation__fadeout="property: opacity; to: 0; dur: 300; startEvents: targetLost"></a-text>
+      <a-text value="김민주 선생님" position="0 0.35 0.02" align="center" color="#ffffff" width="1.8"
+        opacity="0"
+        animation__fadein="property: opacity; to: 1; dur: 800; delay: 400; easing: easeOutCubic; startEvents: targetFound"
+        animation__fadeout="property: opacity; to: 0; dur: 300; startEvents: targetLost"></a-text>
+      <a-entity class="hearts" data-color="#c084fc"></a-entity>
     </a-entity>
   </a-scene>
 
   <script>
     const PIN_HASH = "2b163bbc76c9e28c28fface3cec21aa8d3c32a1b043e5393076893481974bc7a";
     const PIN_SESSION_KEY = "ar-pin-ok";
-    const TRIGGER_IMG = "assets/target.jpg";
-    const CACHE_KEY = "ar-target-v1";
+    const TRIGGER_IMGS = ["assets/t-a.jpg", "assets/t-b.jpg", "assets/t-c.jpg"];
+    const CACHE_KEY = "ar-multi-target-v1";
 
     async function sha256Hex(s) {
       const buf = new TextEncoder().encode(s);
@@ -236,7 +236,15 @@
       console.error(e);
     };
 
-    async function loadOrCompileTarget() {
+    async function loadImage(src) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = src;
+      await new Promise((r, j) => { img.onload = r; img.onerror = j; });
+      return img;
+    }
+
+    async function loadOrCompileTargets() {
       try {
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
@@ -244,46 +252,48 @@
           const arr = Uint8Array.from(atob(cached), c => c.charCodeAt(0));
           return URL.createObjectURL(new Blob([arr.buffer]));
         }
-      } catch (_) { /* cache miss/error */ }
+      } catch (_) {}
 
-      setLoadingMsg("카드 정보를 학습 중이에요…");
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = TRIGGER_IMG;
-      await new Promise((r, j) => { img.onload = r; img.onerror = j; });
-      log(`trigger loaded ${img.naturalWidth}x${img.naturalHeight}`);
+      setLoadingMsg("카드 3장 정보를 학습 중이에요…");
+      const imgs = await Promise.all(TRIGGER_IMGS.map(loadImage));
+      imgs.forEach((img, i) => log(`trigger ${i} loaded ${img.naturalWidth}x${img.naturalHeight}`));
 
       if (!window.MINDAR || !window.MINDAR.IMAGE || !window.MINDAR.IMAGE.Compiler) {
         throw new Error("MindAR Compiler unavailable");
       }
       const compiler = new window.MINDAR.IMAGE.Compiler();
-      await compiler.compileImageTargets([img], (progress) => setPct(progress));
+      await compiler.compileImageTargets(imgs, (progress) => setPct(progress));
       const exported = await compiler.exportData();
-      log(`compiled ${exported.byteLength} bytes`);
+      log(`compiled ${exported.byteLength} bytes (${imgs.length} targets)`);
 
       try {
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
-        localStorage.setItem(CACHE_KEY, b64);
-      } catch (_) { /* localStorage may be full, ignore */ }
+        let b64 = "";
+        const bytes = new Uint8Array(exported);
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          b64 += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+        }
+        localStorage.setItem(CACHE_KEY, btoa(b64));
+      } catch (e) { log("cache store skipped: " + e.message); }
 
       return URL.createObjectURL(new Blob([exported]));
     }
 
-    function spawnHearts(host) {
+    function spawnHeartsFor(host, hexColor) {
       const count = 8;
-      const colors = ["#fda4af", "#f9a8d4", "#fcd34d", "#fde68a", "#fb7185", "#f472b6", "#fbbf24", "#fca5a5"];
+      const variants = [hexColor, "#fde68a", hexColor, "#ffffff", hexColor, "#fde68a", hexColor, "#ffffff"];
       for (let i = 0; i < count; i++) {
         const h = document.createElement("a-text");
         h.setAttribute("value", "♥");
-        h.setAttribute("color", colors[i % colors.length]);
+        h.setAttribute("color", variants[i]);
         h.setAttribute("align", "center");
         h.setAttribute("width", "0.6");
         const angle = (i / count) * Math.PI * 2;
-        const r = 0.45;
-        h.setAttribute("position", `${Math.cos(angle) * r} ${Math.sin(angle) * 0.25 - 0.05} 0.05`);
+        const r = 0.42;
+        h.setAttribute("position", `${Math.cos(angle) * r} ${Math.sin(angle) * 0.22 - 0.05} 0.05`);
         h.setAttribute("opacity", "0");
         h.setAttribute("animation__in", `property: opacity; to: 0.95; dur: 900; delay: ${600 + i * 80}; easing: easeOutCubic; startEvents: targetFound`);
-        h.setAttribute("animation__bob", `property: position; dir: alternate; loop: true; dur: ${1400 + i * 90}; delay: ${800 + i * 100}; to: ${Math.cos(angle) * r} ${Math.sin(angle) * 0.25 + 0.05} 0.05; easing: easeInOutSine; startEvents: targetFound`);
+        h.setAttribute("animation__bob", `property: position; dir: alternate; loop: true; dur: ${1400 + i * 90}; delay: ${800 + i * 100}; to: ${Math.cos(angle) * r} ${Math.sin(angle) * 0.22 + 0.05} 0.05; easing: easeInOutSine; startEvents: targetFound`);
         h.setAttribute("animation__out", `property: opacity; to: 0; dur: 300; easing: easeInCubic; startEvents: targetLost`);
         host.appendChild(h);
       }
@@ -293,15 +303,14 @@
       try {
         document.getElementById("intro").style.display = "none";
         document.getElementById("loading").style.display = "flex";
-        const targetUrl = await loadOrCompileTarget();
+        const targetUrl = await loadOrCompileTargets();
 
         const scene = document.getElementById("scene");
-        scene.setAttribute("mindar-image", `imageTargetSrc: ${targetUrl}; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`);
+        scene.setAttribute("mindar-image", `imageTargetSrc: ${targetUrl}; maxTrack: 1; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`);
         scene.style.display = "block";
 
-        spawnHearts(document.getElementById("hearts"));
+        scene.querySelectorAll(".hearts").forEach(el => spawnHeartsFor(el, el.getAttribute("data-color")));
 
-        scene.addEventListener("renderstart", () => log("renderstart"));
         scene.addEventListener("arReady", () => {
           log("arReady");
           document.getElementById("loading").style.display = "none";
@@ -309,12 +318,15 @@
         });
         scene.addEventListener("arError", (e) => showErr(e?.detail ?? e));
 
-        const targetEl = scene.querySelector("[mindar-image-target]");
-        targetEl.addEventListener("targetFound", () => {
-          document.getElementById("hint-overlay").style.display = "none";
-        });
-        targetEl.addEventListener("targetLost", () => {
-          document.getElementById("hint-overlay").style.display = "block";
+        scene.querySelectorAll("[mindar-image-target]").forEach((targetEl, idx) => {
+          targetEl.addEventListener("targetFound", () => {
+            log(`target ${idx} found`);
+            document.getElementById("hint-overlay").style.display = "none";
+          });
+          targetEl.addEventListener("targetLost", () => {
+            log(`target ${idx} lost`);
+            document.getElementById("hint-overlay").style.display = "block";
+          });
         });
 
         setLoadingMsg("카메라 시작 중…");
