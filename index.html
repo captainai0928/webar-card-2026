@@ -65,6 +65,14 @@
       align-items: center; justify-content: center; text-align: center;
     }
     #err pre { white-space: pre-wrap; font-size: 12px; opacity: 0.85; }
+    #debug {
+      position: fixed; top: 8px; right: 8px; z-index: 25;
+      background: rgba(0,0,0,0.75); color: #34d399;
+      font-family: monospace; font-size: 10px; line-height: 1.4;
+      padding: 6px 8px; border-radius: 6px; max-width: 60vw;
+      max-height: 40vh; overflow: auto; white-space: pre-wrap;
+      pointer-events: none;
+    }
     #gate {
       position: fixed; inset: 0; z-index: 30;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -119,6 +127,7 @@
   <div id="hint-overlay">📷 카드를 펼친 채로 카메라에 비춰주세요</div>
 
   <div id="err"><div><h3>오류</h3><pre id="errMsg"></pre></div></div>
+  <div id="debug">debug ready</div>
 
   <a-scene
     id="scene"
@@ -163,7 +172,7 @@
   </a-scene>
 
   <script>
-    const PIN_HASH = "2b163bbc76c9e28c28fface3cec21aa8d3c32a1b043e5393076893481974bc7a";
+    const PIN_HASH = "e2709bf43e5a064b64ed6d315926b596e29c735fc1af2c681a9c6fe8d4e20812";
     const PIN_SESSION_KEY = "ar-pin-ok";
     const TRIGGER_IMGS = ["assets/t-a.jpg", "assets/t-b.jpg", "assets/t-c.jpg"];
     const CACHE_KEY = "ar-multi-target-v2";
@@ -181,6 +190,7 @@
 
     async function tryPin(pin) {
       const h = await sha256Hex(`haneul-${pin}-2026`);
+      log(`pin try → match=${h === PIN_HASH}`);
       if (h === PIN_HASH) {
         try { sessionStorage.setItem(PIN_SESSION_KEY, "1"); } catch (_) {}
         showIntro();
@@ -219,7 +229,20 @@
     }
     setupGate();
 
-    const log = (m) => console.log("[ar]", m);
+    const dbgEl = document.getElementById("debug");
+    const dbgLines = [];
+    const log = (m) => {
+      console.log("[ar]", m);
+      const t = new Date().toISOString().slice(11, 19);
+      dbgLines.push(`${t} ${m}`);
+      if (dbgLines.length > 18) dbgLines.shift();
+      if (dbgEl) dbgEl.textContent = dbgLines.join("\n");
+    };
+    window.addEventListener("error", (e) => log(`[err] ${e.message || e.error}`));
+    window.addEventListener("unhandledrejection", (e) => log(`[rej] ${e.reason?.message || e.reason}`));
+    log(`ua: ${navigator.userAgent.slice(0, 50)}`);
+    log(`secure: ${window.isSecureContext}`);
+    log(`mediaDevices: ${!!navigator.mediaDevices?.getUserMedia}`);
     const setPct = (n) => { document.getElementById("pct").textContent = `${n.toFixed(0)}%`; };
     const setLoadingMsg = (m) => { document.querySelector("#loading .msg").textContent = m; };
     const showErr = (e) => {
@@ -293,13 +316,17 @@
 
     document.getElementById("start").addEventListener("click", async () => {
       try {
+        log("start clicked");
         document.getElementById("intro").style.display = "none";
         document.getElementById("loading").style.display = "flex";
+        log("compiling/loading targets…");
         const targetUrl = await loadOrCompileTargets();
+        log(`targetUrl ready`);
 
         const scene = document.getElementById("scene");
         scene.setAttribute("mindar-image", `imageTargetSrc: ${targetUrl}; maxTrack: 1; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;`);
         scene.style.display = "block";
+        log("scene attached + visible");
 
         scene.querySelectorAll(".hearts").forEach(el => spawnHeartsFor(el, el.getAttribute("data-color")));
 
@@ -322,8 +349,11 @@
         });
 
         setLoadingMsg("카메라 시작 중…");
+        log("calling mindar start()");
         await scene.systems["mindar-image-system"].start();
+        log("mindar start() resolved");
       } catch (e) {
+        log(`[catch] ${e.message || e}`);
         showErr(e);
       }
     });
