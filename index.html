@@ -130,22 +130,23 @@
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
     <a-assets>
-      <img id="hero" src="assets/hero.jpg" />
+      <img id="hero" src="assets/hero.png" />
+      <img id="heart" src="assets/heart.png" />
     </a-assets>
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" data-color="#fda4af">
-      <a-plane src="#hero" position="0 0.5 0.05" height="0.85" width="0.43"></a-plane>
+      <a-image src="#hero" position="0 0.5 0.05" height="0.85" width="0.43" material="transparent: true; alphaTest: 0.1"></a-image>
       <a-entity class="hearts"></a-entity>
     </a-entity>
 
     <a-entity mindar-image-target="targetIndex: 1" data-color="#fb7185">
-      <a-plane src="#hero" position="0 0.5 0.05" height="0.85" width="0.43"></a-plane>
+      <a-image src="#hero" position="0 0.5 0.05" height="0.85" width="0.43" material="transparent: true; alphaTest: 0.1"></a-image>
       <a-entity class="hearts"></a-entity>
     </a-entity>
 
     <a-entity mindar-image-target="targetIndex: 2" data-color="#c084fc">
-      <a-plane src="#hero" position="0 0.5 0.05" height="0.85" width="0.43"></a-plane>
+      <a-image src="#hero" position="0 0.5 0.05" height="0.85" width="0.43" material="transparent: true; alphaTest: 0.1"></a-image>
       <a-entity class="hearts"></a-entity>
     </a-entity>
   </a-scene>
@@ -268,20 +269,20 @@
         });
         scene.addEventListener("arError", (e) => { log("[arError]"); showErr(e?.detail ?? e); });
 
-        // Spawn color hearts per target
+        // Spawn color hearts per target (a-image PNG + color tint)
         scene.querySelectorAll("[mindar-image-target]").forEach((t, i) => {
           const hostsEl = t.querySelector(".hearts");
           const color = t.getAttribute("data-color");
           const variants = [color, "#fde68a", color, "#ffffff", color, "#fde68a", color, "#ffffff"];
           const count = 8;
           for (let h = 0; h < count; h++) {
-            const heart = document.createElement("a-text");
-            heart.setAttribute("value", "♥");
-            heart.setAttribute("color", variants[h]);
-            heart.setAttribute("align", "center");
-            heart.setAttribute("width", "0.7");
+            const heart = document.createElement("a-image");
+            heart.setAttribute("src", "#heart");
+            heart.setAttribute("width", "0.12");
+            heart.setAttribute("height", "0.12");
+            heart.setAttribute("material", `color: ${variants[h]}; transparent: true; alphaTest: 0.1; shader: flat`);
             const angle = (h / count) * Math.PI * 2;
-            const r = 0.5;
+            const r = 0.55;
             heart.setAttribute("position", `${Math.cos(angle) * r} ${Math.sin(angle) * 0.3 - 0.1} 0.06`);
             hostsEl.appendChild(heart);
           }
